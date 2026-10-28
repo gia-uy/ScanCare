@@ -45,12 +45,38 @@ def test_enhance_options_applies_morphology_after_binarization():
     r=client.post(
         '/api/enhance-with-options',
         files=upload('test.png'),
-        data={'mode':'smart','binarize':'true'},
+        data={
+            'mode':'smart',
+            'binarize':'true',
+            'apply_opening':'true',
+            'apply_closing':'true',
+        },
     )
     assert r.status_code==200,r.text
     meta=json.loads(r.headers['X-Processing-Metadata'])
     methods=[step['method'] for step in meta['steps']]
     assert methods[-3:]==['binarization','opening','closing']
+    binarization_step=meta['steps'][-3]
+    assert binarization_step['thresholding']=='adaptive_gaussian'
+    assert binarization_step['block_size']==35
+    result=cv2.imdecode(
+        np.frombuffer(r.content,dtype=np.uint8),
+        cv2.IMREAD_GRAYSCALE,
+    )
+    assert np.any(result==0)
+    assert np.any(result==255)
+def test_enhance_options_leaves_morphology_off_by_default():
+    r=client.post(
+        '/api/enhance-with-options',
+        files=upload('test.png'),
+        data={'mode':'smart','binarize':'true'},
+    )
+    assert r.status_code==200,r.text
+    meta=json.loads(r.headers['X-Processing-Metadata'])
+    methods=[step['method'] for step in meta['steps']]
+    assert methods[-1]=='binarization'
+    assert 'opening' not in methods
+    assert 'closing' not in methods
 def test_enhance_options_skips_morphology_without_binarization():
     r=client.post(
         '/api/enhance-with-options',
@@ -73,6 +99,8 @@ def test_enhance_options_without_smart_enhance():
             'filter_level':'nhe',
             'contrast':'true',
             'binarize':'true',
+            'apply_opening':'true',
+            'apply_closing':'true',
         },
     )
     assert r.status_code==200,r.text

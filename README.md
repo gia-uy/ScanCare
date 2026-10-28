@@ -46,10 +46,10 @@ $env:API_URL = "http://127.0.0.1:8000/api"
 
 ## Quy trình xử lý
 
-Khi bật nhị phân hóa trên giao diện, backend thực hiện nhị phân hóa với
-ngưỡng 140, sau đó chạy Opening rồi Closing, mỗi phép dùng kernel 3×3.
-Khi tắt nhị phân hóa, hai phép hình thái học cũng được bỏ qua. Các bước đã
-chạy được trả về trong metadata `X-Processing-Metadata`.
+Khi bật nhị phân hóa trên giao diện, backend thực hiện nhị phân hóa thích
+nghi Gaussian theo vùng. Opening và Closing có thể bật riêng (kernel 3×3)
+ngay bên dưới; mặc định cả hai tắt để tránh làm mất nét chữ mảnh. Các bước
+đã chạy được trả về trong metadata `X-Processing-Metadata`.
 
 ## Kiểm thử backend
 

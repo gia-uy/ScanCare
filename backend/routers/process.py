@@ -75,6 +75,8 @@ async def enhance_with_options(
     filter_level: str = Form('nhe'),
     contrast: bool = Form(False),
     binarize: bool = Form(False),
+    apply_opening: bool = Form(False),
+    apply_closing: bool = Form(False),
 ):
     image = await read_image(file)
 
@@ -108,7 +110,9 @@ async def enhance_with_options(
         output, extra_steps = apply_extra_options(
             output,
             contrast,
-            binarize
+            binarize,
+            apply_opening,
+            apply_closing,
         )
 
         # 4. Metadata
@@ -128,7 +132,9 @@ async def enhance_with_options(
 
         metadata['extra_options'] = {
             'contrast': contrast,
-            'binarize': binarize
+            'binarize': binarize,
+            'opening': apply_opening if binarize else False,
+            'closing': apply_closing if binarize else False,
         }
 
     except ValueError as exc:

@@ -66,17 +66,21 @@ kết quả ở mức Nhẹ trước khi tăng kernel.
   loại nền xám và làm chữ nổi bật.
 - **Nên tắt** nếu ảnh có con dấu màu, ảnh chụp, hình minh họa hoặc cần giữ
   sắc độ/chi tiết nền.
-- Ứng dụng dùng ngưỡng cố định `140` (không phải ngưỡng Otsu). Ảnh quá tối
-  hoặc quá sáng có thể cần thử thêm các tùy chọn khác.
+- Ứng dụng dùng ngưỡng thích nghi Gaussian theo vùng cục bộ, nên thường
+  phù hợp hơn ngưỡng cố định khi nền giấy sáng không đồng đều. Kết quả vẫn
+  có thể cần điều chỉnh nếu ảnh quá tối, mờ hoặc chữ có độ tương phản thấp.
 
-Khi bật nhị phân hóa, ứng dụng tự chạy thêm:
+Khi bật nhị phân hóa, ứng dụng chuyển ảnh sang đen trắng bằng ngưỡng thích
+nghi. Opening và Closing là hai tùy chọn riêng, mặc định tắt để bảo toàn
+nét chữ:
 
-1. **Opening 3×3:** giúp loại bỏ các đốm nhỏ; có thể làm mảnh hoặc mất nét
-   chữ rất nhỏ.
-2. **Closing 3×3:** giúp nối các khe hở nhỏ; có thể làm nét chữ dày hơn.
+1. **Opening 3×3:** bật khi ảnh có nhiều đốm nhỏ; có thể làm mảnh hoặc mất
+   nét chữ nhỏ. Nếu chữ bị rỗ/mất nét, hãy để tùy chọn này tắt.
+2. **Closing 3×3:** bật khi nét chữ bị đứt thành khe nhỏ; có thể làm nét
+   chữ dày hơn.
 
-Opening và Closing chỉ chạy sau nhị phân hóa; không có tùy chọn bật riêng
-hai phép này trên giao diện.
+Opening và Closing chỉ chạy sau nhị phân hóa. Có thể thử từng phép riêng;
+không nhất thiết phải bật cả hai cùng lúc.
 
 ## 4. Cấu hình nên thử
 
@@ -91,8 +95,9 @@ hai phép này trên giao diện.
 
 - Bật Median Filter, bắt đầu với kernel 3×3.
 - Nếu tài liệu chỉ có chữ đen trắng, thử bật nhị phân hóa để áp dụng thêm
-  Opening và Closing.
-- Nếu chữ mảnh bị mất, giảm mức lọc hoặc tắt nhị phân hóa.
+  Closing nếu nét chữ bị đứt. Chỉ bật Opening nếu có đốm nhiễu nhỏ.
+- Nếu chữ mảnh bị mất, tắt Opening trước; nếu vẫn chưa rõ, tắt nhị phân
+  hóa hoặc giảm mức lọc.
 
 ### Nền giấy loang sáng hoặc bị xám
 
@@ -112,7 +117,8 @@ hai phép này trên giao diện.
 ## 5. Lưu ý
 
 - Thứ tự xử lý là: **lọc nhiễu (nếu bật) → Smart Enhance (nếu bật) → tăng
-  tương phản (nếu bật) → nhị phân hóa (nếu bật) → Opening → Closing**.
+  tương phản (nếu bật) → nhị phân hóa (nếu bật) → Opening/Closing (nếu
+  bật riêng)**.
 - Không phải lúc nào bật tất cả cũng cho ảnh tốt hơn. Hãy thay đổi từng
   lựa chọn và so sánh trước/sau.
 - Nên giữ ảnh gốc riêng nếu đây là tài liệu quan trọng.

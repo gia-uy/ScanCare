@@ -10,7 +10,8 @@ import os
 API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/api").rstrip("/")
 
 def process_with_api(image, mode="smart", noise_level="Nhẹ", contrast=False, binarize=False,
-                     apply_filter=False, filter_method="median", filter_level="nhe"):
+                     apply_filter=False, filter_method="median", filter_level="nhe",
+                     apply_opening=False, apply_closing=False):
     buffer = io.BytesIO()
     image.convert("RGB").save(buffer, format="PNG")
     buffer.seek(0)
@@ -24,6 +25,8 @@ def process_with_api(image, mode="smart", noise_level="Nhẹ", contrast=False, b
         "apply_filter": str(apply_filter).lower(),
         "filter_method": filter_method,
         "filter_level": filter_level,
+        "apply_opening": str(apply_opening).lower(),
+        "apply_closing": str(apply_closing).lower(),
     }
     response = requests.post(
         f"{API_URL}/enhance-with-options", files=files, data=data, timeout=120
@@ -60,6 +63,10 @@ if "enhance_contrast" not in st.session_state:
     st.session_state.enhance_contrast = True
 if "binarize" not in st.session_state:
     st.session_state.binarize = False
+if "apply_opening" not in st.session_state:
+    st.session_state.apply_opening = False
+if "apply_closing" not in st.session_state:
+    st.session_state.apply_closing = False
 
 if "noise_level" not in st.session_state:
     st.session_state.noise_level = "Vừa"
@@ -92,6 +99,8 @@ def run_api_processing():
                 apply_filter=st.session_state.apply_filter,
                 filter_method=st.session_state.filter_method,
                 filter_level=st.session_state.filter_level,
+                apply_opening=st.session_state.apply_opening,
+                apply_closing=st.session_state.apply_closing,
             )
     except requests.exceptions.RequestException as exc:
         st.error(f"Không kết nối được FastAPI hoặc API trả lỗi: {exc}")
@@ -117,12 +126,20 @@ def render_processing_controls(suffix):
         value=st.session_state.smart_enabled,
         key=f"smart_{suffix}",
     )
-    st.caption("Smart Enhance phân tích ảnh và hiệu chỉnh nền nếu cần; không tự lọc Median.")
+    st.caption(
+        "Nên bật khi nền giấy loang sáng hoặc bị xám. Tự phân tích và hiệu "
+        "chỉnh nền nếu cần; có thể chuyển ảnh màu thành ảnh xám, không thay "
+        "thế bộ lọc khử nhiễu."
+    )
 
     st.session_state.apply_filter = st.checkbox(
         "Bật lọc nhiễu",
         value=st.session_state.apply_filter,
         key=f"filter_enabled_{suffix}",
+    )
+    st.caption(
+        "Bật khi ảnh có hạt nhiễu hoặc đốm nhỏ. Nếu ảnh đã sạch, hãy tắt để "
+        "tránh làm mềm nét chữ."
     )
     if st.session_state.apply_filter:
         st.session_state.filter_method = st.radio(
@@ -133,6 +150,16 @@ def render_processing_controls(suffix):
             horizontal=True,
             key=f"filter_method_{suffix}",
         )
+        if st.session_state.filter_method == "median":
+            st.caption(
+                "Median: phù hợp với đốm đen/trắng kiểu muối tiêu; thường giữ "
+                "biên chữ tốt hơn Gaussian."
+            )
+        else:
+            st.caption(
+                "Gaussian: làm mượt nhiễu hạt nhẹ; có thể làm mềm biên và mờ "
+                "nét chữ hơn Median."
+            )
         levels = ["nhe", "vua", "manh"]
         st.session_state.filter_level = st.radio(
             "Mức độ lọc",
@@ -142,7 +169,12 @@ def render_processing_controls(suffix):
             horizontal=True,
             key=f"filter_level_{suffix}",
         )
-        st.caption("Mức lọc mạnh có thể làm mờ hoặc đứt nét chữ nhỏ.")
+        level_descriptions = {
+            "nhe": "Nhẹ 3×3: nên thử đầu tiên; giữ chi tiết chữ tốt nhất.",
+            "vua": "Vừa 5×5: dùng khi nhiễu rõ hơn; kiểm tra chữ nhỏ sau xử lý.",
+            "manh": "Mạnh 7×7: dùng khi nhiễu nhiều; dễ làm mờ hoặc mất nét mảnh.",
+        }
+        st.caption(level_descriptions[st.session_state.filter_level])
 
     st.markdown("**Tùy chọn nâng cao:**")
     st.session_state.enhance_contrast = st.checkbox(
@@ -150,16 +182,42 @@ def render_processing_controls(suffix):
         value=st.session_state.enhance_contrast,
         key=f"contrast_{suffix}",
     )
+    st.caption(
+        "Bật khi chữ nhạt hoặc nền xám để tăng chênh lệch sáng-tối. Kết quả "
+        "chuyển sang ảnh xám; có thể làm ảnh tương phản mạnh trông gắt hơn."
+    )
     st.session_state.binarize = st.checkbox(
         "Làm rõ chữ bằng nhị phân hóa (Đen / Trắng)",
         value=st.session_state.binarize,
         key=f"binarize_{suffix}",
     )
     st.caption(
-        "Khi bật, ảnh được nhị phân hóa rồi áp dụng Opening và Closing "
-        "với kernel 3×3. Phù hợp với tài liệu thuần văn bản; không nên dùng "
-        "cho ảnh có màu."
+        "Bật cho tài liệu chủ yếu là chữ đen trên giấy sáng để tạo ảnh đen "
+        "trắng. Không phù hợp với con dấu, ảnh hoặc nội dung cần giữ màu."
     )
+    if st.session_state.binarize:
+        st.caption(
+            "Ngưỡng thích nghi xử lý nền sáng không đều tốt hơn ngưỡng cố "
+            "định, nhưng chữ mờ vẫn có thể bị mất."
+        )
+        st.session_state.apply_opening = st.checkbox(
+            "Opening — loại đốm nhỏ",
+            value=st.session_state.apply_opening,
+            key=f"opening_{suffix}",
+        )
+        st.caption(
+            "Nên bật khi còn nhiều chấm nhiễu nhỏ. Có thể xóa nét chữ mảnh; "
+            "nếu chữ bị rỗ, hãy tắt."
+        )
+        st.session_state.apply_closing = st.checkbox(
+            "Closing — nối khe nhỏ",
+            value=st.session_state.apply_closing,
+            key=f"closing_{suffix}",
+        )
+        st.caption(
+            "Nên bật khi nét chữ có khe đứt nhỏ. Có thể làm chữ dày hoặc "
+            "dính nét nếu áp dụng quá mức."
+        )
 
 
 # ====================== STYLESHEET (CSS) ======================

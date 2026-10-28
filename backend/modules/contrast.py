@@ -54,3 +54,35 @@ def binarization(gray_img, thresh_val=127):
     )
 
     return binary_img
+
+
+def adaptive_binarization(gray_img, block_size=35, c=10):
+    """Nhị phân hóa theo vùng cục bộ để xử lý nền sáng không đồng đều."""
+    _validate_gray_image(gray_img)
+
+    if (
+        not isinstance(block_size, int)
+        or block_size < 3
+        or block_size % 2 == 0
+    ):
+        raise ValueError("Block size phải là số lẻ và lớn hơn hoặc bằng 3.")
+
+    if not isinstance(c, (int, float)) or not np.isfinite(c):
+        raise ValueError("C phải là một số hữu hạn.")
+
+    height, width = gray_img.shape
+    max_block_size = min(height, width)
+    if max_block_size % 2 == 0:
+        max_block_size -= 1
+    if max_block_size < 3:
+        raise ValueError("Ảnh phải rộng và cao tối thiểu 3 pixel.")
+
+    effective_block_size = min(block_size, max_block_size)
+    return cv2.adaptiveThreshold(
+        gray_img,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY,
+        effective_block_size,
+        c,
+    )
