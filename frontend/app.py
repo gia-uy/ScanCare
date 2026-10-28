@@ -11,7 +11,7 @@ API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/api").rstrip("/")
 
 def process_with_api(image, mode="smart", noise_level="Nhẹ", contrast=False, binarize=False,
                      apply_filter=False, filter_method="median", filter_level="nhe",
-                     apply_opening=False, apply_closing=False):
+                     apply_opening=False, apply_closing=False, apply_erosion=False, apply_dilation=False):
     buffer = io.BytesIO()
     image.convert("RGB").save(buffer, format="PNG")
     buffer.seek(0)
@@ -25,6 +25,8 @@ def process_with_api(image, mode="smart", noise_level="Nhẹ", contrast=False, b
         "apply_filter": str(apply_filter).lower(),
         "filter_method": filter_method,
         "filter_level": filter_level,
+        "apply_erosion": str(apply_erosion).lower(),
+        "apply_dilation": str(apply_dilation).lower(),
         "apply_opening": str(apply_opening).lower(),
         "apply_closing": str(apply_closing).lower(),
     }
@@ -63,6 +65,10 @@ if "enhance_contrast" not in st.session_state:
     st.session_state.enhance_contrast = True
 if "binarize" not in st.session_state:
     st.session_state.binarize = False
+if "apply_erosion" not in st.session_state:
+    st.session_state.apply_erosion = False
+if "apply_dilation" not in st.session_state:
+    st.session_state.apply_dilation = False
 if "apply_opening" not in st.session_state:
     st.session_state.apply_opening = False
 if "apply_closing" not in st.session_state:
@@ -99,6 +105,8 @@ def run_api_processing():
                 apply_filter=st.session_state.apply_filter,
                 filter_method=st.session_state.filter_method,
                 filter_level=st.session_state.filter_level,
+                apply_erosion=st.session_state.apply_erosion,
+                apply_dilation=st.session_state.apply_dilation,
                 apply_opening=st.session_state.apply_opening,
                 apply_closing=st.session_state.apply_closing,
             )
@@ -200,6 +208,20 @@ def render_processing_controls(suffix):
             "Ngưỡng thích nghi xử lý nền sáng không đều tốt hơn ngưỡng cố "
             "định, nhưng chữ mờ vẫn có thể bị mất."
         )
+        st.markdown("**Các phép hình thái học (tùy chọn):**")
+        st.caption("Chỉ áp dụng trên ảnh đã nhị phân hóa. Nên bật từng phép một để so sánh; kernel 3×3 có thể ảnh hưởng dấu và nét chữ nhỏ.")
+        st.session_state.apply_erosion = st.checkbox(
+            "Erosion (phép co) — làm mảnh nét chữ",
+            value=st.session_state.apply_erosion,
+            key=f"erosion_{suffix}",
+        )
+        st.caption("Dùng thử khi nét chữ quá dày hoặc dính nhẹ; có nguy cơ xóa nét mảnh và dấu tiếng Việt.")
+        st.session_state.apply_dilation = st.checkbox(
+            "Dilation (phép giãn) — làm dày nét chữ",
+            value=st.session_state.apply_dilation,
+            key=f"dilation_{suffix}",
+        )
+        st.caption("Dùng thử khi nét chữ quá mảnh hoặc đứt nhẹ; có nguy cơ làm dính các ký tự gần nhau.")
         st.session_state.apply_opening = st.checkbox(
             "Opening — loại đốm nhỏ",
             value=st.session_state.apply_opening,

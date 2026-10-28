@@ -2,7 +2,7 @@
 import cv2
 import numpy as np
 from modules.contrast import contrast_stretching, adaptive_binarization
-from modules.morphology import opening, closing
+from modules.morphology import erosion, dilation, opening, closing
 
 
 def apply_extra_options(
@@ -11,6 +11,8 @@ def apply_extra_options(
     binarize=False,
     apply_opening=False,
     apply_closing=False,
+    apply_erosion=False,
+    apply_dilation=False,
 ):
     """Áp dụng tùy chọn sau Auto/Smart; ảnh uint8 BGR hoặc grayscale."""
     if not contrast and not binarize:
@@ -39,6 +41,16 @@ def apply_extra_options(
             "block_size": block_size,
             "c": 10,
         })
+
+        # Thứ tự cố định khi bật đồng thời: co → giãn → mở → đóng.
+        # Nên sử dụng riêng từng phép trong thí nghiệm để tránh thay đổi chữ quá mức.
+        if apply_erosion:
+            gray = erosion(gray, kernel_size=3, threshold=127)
+            steps.append({"method": "erosion", "kernel_size": 3, "threshold": 127})
+
+        if apply_dilation:
+            gray = dilation(gray, kernel_size=3, threshold=127)
+            steps.append({"method": "dilation", "kernel_size": 3, "threshold": 127})
 
         if apply_opening:
             gray = opening(gray, kernel_size=3, threshold=127)
